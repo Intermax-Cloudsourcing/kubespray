@@ -1,3 +1,15 @@
+{% macro key_to_snake(key) -%}
+{{ key.split('_') | first }}{{ key.split('_')[1:] | map('capitalize') | join }}
+{%- endmacro -%}
+
+{% macro process_dict(dict) %}
+
+{% for key, value in dict.iteritems() %}
+{{ key_to_snake(key) }}: {% if value is mapping %}{{ process_dict(value) | indent(2) }}{% else %}{{ value }} 
+{% endif %}
+{% endfor %}
+{% endmacro -%}
+
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -6,6 +18,7 @@ metadata:
   namespace: {{ local_volume_provisioner_namespace }}
 data:
   storageClassMap: |
-    {{ local_volume_provisioner_storage_class }}:
-      hostDir: {{ local_volume_provisioner_base_dir }}
-      mountDir: {{ local_volume_provisioner_mount_dir }}
+{% for class_name in local_volume_provisioner_storage_classes %}
+    {{ class_name }}: {{ process_dict(local_volume_provisioner_storage_class_maps[class_name]) | indent(width=6) }}
+{%- endfor %}
+
